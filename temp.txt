@@ -1,0 +1,14 @@
+0  0 START 100
+0 CLA 0     CLA
+0 INP 0     INP A
+0 INP 0     INP B
+0 LAC 0     LAC A
+0 SUB 0     SUB B
+0 BRN 0     BRN L1
+0 DSP 0     DSP A
+0 CLA 0     CLA
+0 BRZ 0     BRZ L2
+0 DSP 0 L1: DSP B
+0 CLA 0     CLA
+0 BRZ 0     BRZ L2
+0 STP 0 L2: STP

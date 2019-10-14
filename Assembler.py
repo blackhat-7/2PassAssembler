@@ -1,21 +1,22 @@
-
-class Main:
-
+class Assembler:
     literal_table = pseudo_table = mot_table = []
     sym_table = op_table = dict()
 
-    def main(self) :
-        self.pass_one()
+    @staticmethod
+    def main():
+        assembler = Assembler()
+        assembler.pass_one()
 
-    def pass_one(self) :
-        file = open("input.txt" ,"r")
-
+    def pass_one(self):
+        input_file = open("input.txt", "r")
+        temp_file = open("temp.txt", "w")
+        temp_file.close()
         location_counter = 0
         self.initialize__tables()
 
-        if file.mode == 'r':
+        if input_file.mode == 'r':
 
-            for line in file :
+            for line in input_file:
                 length = 0
                 op_type = 0
                 opcode = ""
@@ -23,22 +24,23 @@ class Main:
                 if line[:5] == "START":
                     location_counter = int(line[6:])
 
-                if line[:3] == "END":
-                    self.rewind_temp_for_pass_two()
-                    self.sort_literal_table()
+                elif line[:3] == "END":
+                    # self.rewind_temp_for_pass_two()
+                    # self.sort_literal_table()
                     self.remove_redundant_literals()
                     break
 
                 elif self.line_is_no_comment(line):
                     symbol = self.check_for_symbol(line)
                     if symbol is not None:
-                        self.enter_new_symbol(symbol ,location_counter)
+                        self.enter_new_symbol(symbol, location_counter)
 
                     literal = self.check_for_literal(line)
                     if literal is not None:
                         self.enter_new_literal(literal)
 
                     opcode = self.extract_opcode(line)
+                    print(line)
                     op_type = self.search_opcode_table(opcode)
                     if op_type < 0:
                         op_type = self.search_pseudo_table(opcode)
@@ -51,7 +53,7 @@ class Main:
                         length = int(symbol)
                     elif op_type == 4:
                         length = 1
-
+                print(op_type, opcode, length, line)
                 self.write_temp_file(op_type, opcode, length, line)
                 location_counter += length
 
@@ -112,12 +114,14 @@ class Main:
 
     @staticmethod
     def check_for_literal(line):
-        if line[:4] == "    ":
-            if line[8] != "L" and line[7] == " " and line[8] != " ":
-                return line[8:]
-            if line[8] != "L" and line[7] != " ":
-                return line[9:]
-
+        try:
+            if line[:4] == "    ":
+                if line[8] != "L" and line[7] == " " and line[8] != " ":
+                    return line[8:]
+                if line[8] != "L" and line[7] != " ":
+                    return line[9:]
+        except IndexError:
+            return None
         return None
 
     def enter_new_literal(self, literal):
@@ -144,17 +148,19 @@ class Main:
         return 0
 
     @staticmethod
-    def write_temp_file(type, opcode, length, line):
-        file = open("op_table.txt", "w")
-        if file.mode == 'w':
-            file.write(type + " " + opcode + " " + length + " " + line)
+    def write_temp_file(op_type, opcode, length, line):
+        file = open("temp.txt", "a")
+        if file.mode == 'a':
+            file.write(str(op_type) + " " + opcode + " " + str(length) + " " + line)
 
     # def rewind_temp_for_pass_two(self):
     #
     # def sort_literal_table(self):
     #
-    # def remove_redundant_literals(self):
-    #
+    def remove_redundant_literals(self):
+        self.literal_table = list(dict.fromkeys(self.literal_table))
+        return self.literal_table
+
     # def read_type(self):
     #
     # def read_opcode(self):
@@ -170,3 +176,7 @@ class Main:
     # def write_listing(self, code, line):
     #
     # def finish_up(self):
+
+
+if __name__ == '__main__':
+    Assembler.main()
