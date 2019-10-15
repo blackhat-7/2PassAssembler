@@ -1,6 +1,6 @@
 class Assembler:
-    literal_table = pseudo_table = mot_table = []
-    sym_table = op_table = dict()
+    label_table, literal_table, firstPassTable = [], [], []
+    sym_table,  op_table = dict(), dict()
 
     @staticmethod
     def main():
@@ -12,11 +12,14 @@ class Assembler:
         temp_file = open("temp.txt", "w")
         temp_file.close()
         location_counter = 0
+        pass1final = []
+        symbol = ""
         self.initialize__tables()
 
         if input_file.mode == 'r':
 
             for line in input_file:
+                pass1Code = []
                 length = 0
                 op_type = 0
                 opcode = ""
@@ -31,18 +34,11 @@ class Assembler:
                     break
 
                 elif self.line_is_no_comment(line):
-                    symbol = self.check_for_symbol(line)
-                    if symbol is not None:
-                        self.enter_new_symbol(symbol, location_counter)
-
-                    literal = self.check_for_literal(line)
-                    if literal is not None:
-                        self.enter_new_literal(literal)
 
                     opcode = self.extract_opcode(line)
-                    print(line)
                     op_type = self.search_opcode_table(opcode)
-                    if op_type < 0:
+                    pass1Code.append(['OP', op_type])
+                    if int(op_type) < 0:
                         op_type = self.search_pseudo_table(opcode)
 
                     if op_type == 1:
@@ -53,9 +49,24 @@ class Assembler:
                         length = int(symbol)
                     elif op_type == 4:
                         length = 1
-                print(op_type, opcode, length, line)
-                self.write_temp_file(op_type, opcode, length, line)
-                location_counter += length
+
+                    variable = self.check_for_variable(line)
+                    if variable is not None:
+                        self.enter_new_variable(variable, location_counter)
+
+                    label = self.check_for_label(line)
+                    if label is not None:
+                        self.enter_new_label(label, location_counter)
+                        pass1Code.append(['ST', label])
+
+                    pass1Code.append(variable)
+                    location_counter += 1
+
+                pass1final.append(pass1Code)
+
+        for line in pass1final:
+            print(line)
+        print(self.sym_table)
 
     # def pass_two(self) :
     #     more_input = True
@@ -91,41 +102,41 @@ class Assembler:
         file = open("op_table.txt", "r")
         if file.mode == 'r':
             for i in file.readlines():
-                self.op_table[i[:3]] = i[4:]
+                self.op_table[i[:3]] = i[4:-1]
 
         self.pseudo_table = ["WORD", "RESW", "RESB", "BYTE"]
 
     @staticmethod
     def line_is_no_comment(line):
-        if line[:2] == "/*":
-            return False
-        return True
+        return not (line[0] == ";")
 
-    @staticmethod
-    def check_for_symbol(line):
+    def check_for_label(self, line):
         if line[0] == "L":
             x = line.index(":")
-            sym = line[:x]
-            return sym
+            lit = line[:x]
+            return lit
         return None
 
-    def enter_new_symbol(self, symbol, location_counter):
-        self.sym_table[symbol] = location_counter
+    def enter_new_label(self, label, location_counter):
+        if label not in self.label_table:
+            self.sym_table[label] = ['L', location_counter]
 
-    @staticmethod
-    def check_for_literal(line):
+    def check_for_variable(self, line):
         try:
-            if line[:4] == "    ":
-                if line[8] != "L" and line[7] == " " and line[8] != " ":
-                    return line[8:]
-                if line[8] != "L" and line[7] != " ":
-                    return line[9:]
+            if line[7] == " " and line[8] != " ":
+                x = line[8:-1]
+                return x
+            if line[7] != " ":
+                x = line[9:-1]
+                return x
         except IndexError:
             return None
         return None
 
-    def enter_new_literal(self, literal):
-        self.literal_table.append(literal)
+    def enter_new_variable(self, variable, location_counter):
+        if variable is not "" and variable not in self.sym_table.keys():
+            if variable[0] != "L":
+                self.sym_table[variable] = ['V', location_counter]
 
     @staticmethod
     def extract_opcode(line):
@@ -136,16 +147,12 @@ class Assembler:
     def search_opcode_table(self, opcode):
         try:
             op = self.op_table[opcode]
-            return 0
+            return op
         except KeyError:
             return -1
 
     def search_pseudo_table(self, opcode):
         return self.pseudo_table.index(opcode) + 1
-
-    @staticmethod
-    def get_length_of_type(line):
-        return 0
 
     @staticmethod
     def write_temp_file(op_type, opcode, length, line):
